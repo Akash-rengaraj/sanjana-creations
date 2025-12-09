@@ -4,6 +4,9 @@ import { Star, Heart, Truck, ShieldCheck, RotateCcw, Minus, Plus } from 'lucide-
 import { gsap } from 'gsap';
 import Button from '../components/Button';
 import ProductCard from '../components/ProductCard';
+import { getProductById } from '../services/productService';
+import { useCartStore } from '../store/cartStore';
+import { useNavigate } from 'react-router-dom';
 
 const Shop = () => {
     const { id } = useParams();
@@ -12,25 +15,52 @@ const Shop = () => {
     const [selectedSize, setSelectedSize] = useState('M');
     const [selectedColor, setSelectedColor] = useState('Gold');
     const imageRef = useRef<HTMLImageElement>(null);
+    const addToCart = useCartStore(state => state.addToCart);
+    const navigate = useNavigate();
 
-    // Dummy product data
-    const product = {
-        id: id || '1',
-        name: 'Royal Kundan Necklace Set',
-        price: 2499,
-        originalPrice: 3499,
-        rating: 4.8,
-        reviews: 247,
-        description: "This exquisite necklace combines traditional craftsmanship with modern design. Handcrafted by skilled artisans, it features premium Kundan stones set in gold-plated brass. Perfect for weddings and special occasions.",
-        images: [
-            'https://images.unsplash.com/photo-1599643478518-17488fbbcd75?q=80&w=1887&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=1887&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=1887&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1535632787350-4e68ef0ac584?q=80&w=1887&auto=format&fit=crop',
-        ],
-        sizes: ['S', 'M', 'L', 'XL'],
-        colors: ['Gold', 'Silver', 'Rose Gold']
-    };
+    const [product, setProduct] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchProduct = async () => {
+            if (!id) return;
+            try {
+                const data = await getProductById(Number(id));
+                setProduct(data);
+                if (data.image) {
+                    // Ensure image is an array for the gallery
+                    // If backend only stores one image string, wrap it
+                    // Ideally backend should store array, but for now we adapt
+                }
+            } catch (error) {
+                console.error('Failed to fetch product:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProduct();
+    }, [id]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-white">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
+            </div>
+        );
+    }
+
+    if (!product) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-white">
+                <p className="text-xl text-gray-500">Product not found</p>
+            </div>
+        );
+    }
+
+    // Adapter for single image to array
+    const productImages = product.images || [product.image];
+    const productSizes = product.sizes || ['S', 'M', 'L', 'XL']; // Default if missing
+    const productColors = product.colors || ['Gold', 'Silver']; // Default if missing
 
     const relatedProducts = [
         {
@@ -109,13 +139,13 @@ const Shop = () => {
                         >
                             <img
                                 ref={imageRef}
-                                src={product.images[selectedImage]}
+                                src={productImages[selectedImage]}
                                 alt={product.name}
                                 className="w-full h-full object-cover transition-transform duration-200"
                             />
                         </div>
                         <div className="flex gap-4 overflow-x-auto pb-2">
-                            {product.images.map((img, index) => (
+                            {productImages.map((img: string, index: number) => (
                                 <button
                                     key={index}
                                     onClick={() => setSelectedImage(index)}
@@ -149,9 +179,9 @@ const Shop = () => {
                         <div className="mb-8">
                             <div className="flex items-baseline gap-4">
                                 <span className="text-3xl font-bold text-navy">₹{product.price.toLocaleString()}</span>
-                                <span className="text-xl text-gray-400 line-through">₹{product.originalPrice.toLocaleString()}</span>
+                                <span className="text-xl text-gray-400 line-through">₹{(product.originalPrice || product.price * 1.2).toLocaleString()}</span>
                                 <span className="bg-orange/10 text-orange px-2 py-1 rounded text-sm font-bold">
-                                    {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
+                                    {Math.round((((product.originalPrice || product.price * 1.2) - product.price) / (product.originalPrice || product.price * 1.2)) * 100)}% OFF
                                 </span>
                             </div>
                             <p className="text-gray-500 text-sm mt-1">Price inclusive of all taxes</p>
@@ -166,7 +196,7 @@ const Shop = () => {
                             <div>
                                 <span className="block font-bold text-navy mb-2">Size</span>
                                 <div className="flex gap-3">
-                                    {product.sizes.map(size => (
+                                    {productSizes.map((size: string) => (
                                         <button
                                             key={size}
                                             onClick={() => setSelectedSize(size)}
@@ -181,7 +211,7 @@ const Shop = () => {
                             <div>
                                 <span className="block font-bold text-navy mb-2">Color</span>
                                 <div className="flex gap-3">
-                                    {product.colors.map(color => (
+                                    {productColors.map((color: string) => (
                                         <button
                                             key={color}
                                             onClick={() => setSelectedColor(color)}
@@ -217,10 +247,42 @@ const Shop = () => {
 
                         {/* Actions */}
                         <div className="flex gap-4 mb-8">
-                            <Button variant="primary" size="lg" className="flex-1">
+                            <Button
+                                variant="primary"
+                                size="lg"
+                                className="flex-1"
+                                onClick={() => {
+                                    addToCart({
+                                        id: product.id,
+                                        name: product.name,
+                                        price: product.price,
+                                        image: productImages[0],
+                                        quantity: quantity,
+                                        size: selectedSize,
+                                        color: selectedColor
+                                    });
+                                    alert('Added to cart!');
+                                }}
+                            >
                                 Add to Cart
                             </Button>
-                            <Button variant="secondary" size="lg" className="flex-1">
+                            <Button
+                                variant="secondary"
+                                size="lg"
+                                className="flex-1"
+                                onClick={() => {
+                                    addToCart({
+                                        id: product.id,
+                                        name: product.name,
+                                        price: product.price,
+                                        image: productImages[0],
+                                        quantity: quantity,
+                                        size: selectedSize,
+                                        color: selectedColor
+                                    });
+                                    navigate('/cart');
+                                }}
+                            >
                                 Buy Now
                             </Button>
                         </div>

@@ -1,47 +1,14 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Trash2, Minus, Plus, ArrowRight } from 'lucide-react';
 import Button from '../components/Button';
+import { useCartStore } from '../store/cartStore';
 
 const Cart = () => {
-    const [cartItems, setCartItems] = useState([
-        {
-            id: '1',
-            name: 'Royal Kundan Necklace Set',
-            price: 2499,
-            image: 'https://images.unsplash.com/photo-1599643478518-17488fbbcd75?q=80&w=1887&auto=format&fit=crop',
-            quantity: 1,
-            size: 'M',
-            color: 'Gold'
-        },
-        {
-            id: '2',
-            name: 'Antique Gold Plated Bangles',
-            price: 1299,
-            image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=1887&auto=format&fit=crop',
-            quantity: 2,
-            size: 'Standard',
-            color: 'Gold'
-        }
-    ]);
+    const { items: cartItems, updateQuantity, removeFromCart: removeItem, total } = useCartStore();
 
-    const updateQuantity = (id: string, change: number) => {
-        setCartItems(items => items.map(item => {
-            if (item.id === id) {
-                const newQuantity = Math.max(1, item.quantity + change);
-                return { ...item, quantity: newQuantity };
-            }
-            return item;
-        }));
-    };
-
-    const removeItem = (id: string) => {
-        setCartItems(items => items.filter(item => item.id !== id));
-    };
-
-    const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const subtotal = total();
     const shipping = subtotal > 500 ? 0 : 50;
-    const total = subtotal + shipping;
+    const finalTotal = subtotal + shipping;
 
     if (cartItems.length === 0) {
         return (
@@ -120,7 +87,7 @@ const Cart = () => {
                                 </div>
                                 <div className="border-t border-gray-100 pt-3 flex justify-between font-bold text-lg text-navy">
                                     <span>Total</span>
-                                    <span>₹{total.toLocaleString()}</span>
+                                    <span>₹{finalTotal.toLocaleString()}</span>
                                 </div>
                             </div>
 

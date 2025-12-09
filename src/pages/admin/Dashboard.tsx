@@ -1,11 +1,40 @@
+import { useState, useEffect } from 'react';
 import { DollarSign, ShoppingBag, Package, Users, TrendingUp } from 'lucide-react';
+import { getDashboardStats } from '../../services/dashboardService';
+import { getOrders } from '../../services/orderService';
+import EmptyState from '../../components/admin/EmptyState';
 
 const Dashboard = () => {
-    const stats = [
-        { title: 'Total Sales', value: '₹1,24,500', icon: <DollarSign size={24} />, color: 'bg-green-100 text-green-600', trend: '+12.5%' },
-        { title: 'Total Orders', value: '156', icon: <ShoppingBag size={24} />, color: 'bg-blue-100 text-blue-600', trend: '+8.2%' },
-        { title: 'Total Products', value: '48', icon: <Package size={24} />, color: 'bg-orange-100 text-orange-600', trend: '+2.4%' },
-        { title: 'Total Customers', value: '1,205', icon: <Users size={24} />, color: 'bg-purple-100 text-purple-600', trend: '+5.1%' },
+    const [recentOrders, setRecentOrders] = useState<any[]>([]);
+    const [stats, setStats] = useState({
+        totalSales: 0,
+        totalOrders: 0,
+        totalProducts: 0,
+        totalCustomers: 0
+    });
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [statsData, ordersData] = await Promise.all([
+                    getDashboardStats(),
+                    getOrders()
+                ]);
+                setStats(statsData);
+                // Get last 5 orders
+                setRecentOrders(ordersData.slice(0, 5));
+            } catch (error) {
+                console.error('Failed to fetch dashboard data:', error);
+            }
+        };
+        fetchData();
+    }, []);
+
+    const statCards = [
+        { title: 'Total Sales', value: `₹${stats.totalSales.toLocaleString()}`, icon: <DollarSign size={24} />, color: 'bg-green-100 text-green-600', trend: '+12.5%' },
+        { title: 'Total Orders', value: stats.totalOrders, icon: <ShoppingBag size={24} />, color: 'bg-blue-100 text-blue-600', trend: '+8.2%' },
+        { title: 'Total Products', value: stats.totalProducts, icon: <Package size={24} />, color: 'bg-orange-100 text-orange-600', trend: '+2.4%' },
+        { title: 'Total Customers', value: stats.totalCustomers, icon: <Users size={24} />, color: 'bg-purple-100 text-purple-600', trend: '+5.1%' },
     ];
 
     return (
@@ -17,7 +46,7 @@ const Dashboard = () => {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat, index) => (
+                {statCards.map((stat, index) => (
                     <div key={index} className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                         <div className="flex justify-between items-start mb-4">
                             <div className={`p-3 rounded-lg ${stat.color}`}>
@@ -41,42 +70,47 @@ const Dashboard = () => {
                     <button className="text-sm text-gold font-bold hover:underline">View All</button>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
-                                <th className="px-6 py-4 font-medium">Order ID</th>
-                                <th className="px-6 py-4 font-medium">Customer</th>
-                                <th className="px-6 py-4 font-medium">Date</th>
-                                <th className="px-6 py-4 font-medium">Amount</th>
-                                <th className="px-6 py-4 font-medium">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {[
-                                { id: '#ORD-7829', customer: 'Priya Sharma', date: 'Oct 24, 2023', amount: '₹12,450', status: 'Delivered' },
-                                { id: '#ORD-7828', customer: 'Rahul Verma', date: 'Oct 24, 2023', amount: '₹8,999', status: 'Processing' },
-                                { id: '#ORD-7827', customer: 'Anjali Gupta', date: 'Oct 23, 2023', amount: '₹45,000', status: 'Shipped' },
-                                { id: '#ORD-7826', customer: 'Meera Patel', date: 'Oct 23, 2023', amount: '₹2,500', status: 'Pending' },
-                                { id: '#ORD-7825', customer: 'Suresh Kumar', date: 'Oct 22, 2023', amount: '₹18,750', status: 'Delivered' },
-                            ].map((order, index) => (
-                                <tr key={index} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-6 py-4 text-sm font-medium text-navy">{order.id}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-600">{order.customer}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">{order.date}</td>
-                                    <td className="px-6 py-4 text-sm font-medium text-navy">{order.amount}</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${order.status === 'Delivered' ? 'bg-green-100 text-green-600' :
-                                                order.status === 'Processing' ? 'bg-blue-100 text-blue-600' :
-                                                    order.status === 'Shipped' ? 'bg-purple-100 text-purple-600' :
-                                                        'bg-yellow-100 text-yellow-600'
-                                            }`}>
-                                            {order.status}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    <div className="overflow-x-auto">
+                        {recentOrders.length > 0 ? (
+                            <table className="w-full text-left">
+                                <thead>
+                                    <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                                        <th className="px-6 py-4 font-medium">Order ID</th>
+                                        <th className="px-6 py-4 font-medium">Customer</th>
+                                        <th className="px-6 py-4 font-medium">Date</th>
+                                        <th className="px-6 py-4 font-medium">Amount</th>
+                                        <th className="px-6 py-4 font-medium">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {recentOrders.map((order, index) => (
+                                        <tr key={index} className="hover:bg-gray-50 transition-colors">
+                                            <td className="px-6 py-4 text-sm font-medium text-navy">{order.id}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{order.customer}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-500">{order.date}</td>
+                                            <td className="px-6 py-4 text-sm font-medium text-navy">₹{order.total?.toLocaleString()}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${order.status === 'Delivered' ? 'bg-green-100 text-green-600' :
+                                                    order.status === 'Processing' ? 'bg-blue-100 text-blue-600' :
+                                                        order.status === 'Shipped' ? 'bg-purple-100 text-purple-600' :
+                                                            order.status === 'Cancelled' ? 'bg-red-100 text-red-600' :
+                                                                'bg-yellow-100 text-yellow-600'
+                                                    }`}>
+                                                    {order.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <EmptyState
+                                icon={ShoppingBag}
+                                title="No recent orders"
+                                description="When you receive orders, they will appear here."
+                            />
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

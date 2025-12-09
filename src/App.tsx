@@ -10,6 +10,10 @@ import Dashboard from './pages/admin/Dashboard';
 import ProductList from './pages/admin/ProductList';
 import ProductForm from './pages/admin/ProductForm';
 import OrderList from './pages/admin/OrderList';
+import OrderDetails from './pages/admin/OrderDetails';
+import CustomerList from './pages/admin/CustomerList';
+import CustomerForm from './pages/admin/CustomerForm';
+import Settings from './pages/admin/Settings';
 
 function App() {
   return (
@@ -32,6 +36,11 @@ function App() {
           <Route path="products/new" element={<ProductForm />} />
           <Route path="products/edit/:id" element={<ProductForm />} />
           <Route path="orders" element={<OrderList />} />
+          <Route path="orders/:id" element={<OrderDetails />} />
+          <Route path="customers" element={<CustomerList />} />
+          <Route path="customers/new" element={<CustomerForm />} />
+          <Route path="customers/edit/:id" element={<CustomerForm />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
     </Router>

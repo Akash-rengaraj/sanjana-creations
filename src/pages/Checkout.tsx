@@ -1,17 +1,51 @@
 import { useState } from 'react';
 import { CheckCircle } from 'lucide-react';
 import Button from '../components/Button';
+import { useCartStore } from '../store/cartStore';
+import { createOrder } from '../services/orderService';
+import { useForm } from 'react-hook-form';
 
 
 const Checkout = () => {
     const [step, setStep] = useState(1);
     const [isOrderPlaced, setIsOrderPlaced] = useState(false);
+    const { items, total, clearCart } = useCartStore();
+    const { register, handleSubmit, getValues } = useForm();
+    const [orderId, setOrderId] = useState('');
 
-    const handlePlaceOrder = () => {
-        // Simulate API call
-        setTimeout(() => {
+    const subtotal = total();
+    const shipping = subtotal > 500 ? 0 : 50;
+    const finalTotal = subtotal + shipping;
+
+    const handlePlaceOrder = async () => {
+        const formData = getValues();
+        const orderData = {
+            customer: {
+                name: `${formData.firstName} ${formData.lastName}`,
+                email: 'guest@example.com', // Placeholder or add email field
+                phone: formData.phone,
+                address: `${formData.address}, ${formData.city}, ${formData.postalCode}`
+            },
+            items: items.map(item => ({
+                productId: item.id,
+                name: item.name,
+                quantity: item.quantity,
+                price: item.price
+            })),
+            totalAmount: finalTotal,
+            status: 'Pending',
+            paymentMethod: 'COD' // Simplified
+        };
+
+        try {
+            const newOrder = await createOrder(orderData);
+            setOrderId(newOrder.id);
+            clearCart();
             setIsOrderPlaced(true);
-        }, 1500);
+        } catch (error) {
+            console.error('Order failed:', error);
+            alert('Failed to place order');
+        }
     };
 
     if (isOrderPlaced) {
@@ -22,7 +56,7 @@ const Checkout = () => {
                 </div>
                 <h1 className="text-3xl font-heading font-bold text-navy mb-4">Order Placed Successfully!</h1>
                 <p className="text-gray-600 mb-8 max-w-md">
-                    Thank you for your purchase. Your order #SC-12345 has been confirmed and will be shipped shortly.
+                    Thank you for your purchase. Your order #{orderId} has been confirmed and will be shipped shortly.
                 </p>
                 <Button to="/" variant="primary">Continue Shopping</Button>
             </div>
@@ -49,38 +83,38 @@ const Checkout = () => {
                     {/* Form Section */}
                     <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-sm">
                         {step === 1 && (
-                            <div className="animate-fade-in">
+                            <form onSubmit={handleSubmit(() => setStep(2))} className="animate-fade-in">
                                 <h2 className="text-xl font-bold text-navy mb-6">Shipping Information</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-sm font-bold text-navy">First Name</label>
-                                        <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-gold focus:border-gold outline-none" />
+                                        <input {...register('firstName', { required: true })} type="text" className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-gold focus:border-gold outline-none" />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-bold text-navy">Last Name</label>
-                                        <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-gold focus:border-gold outline-none" />
+                                        <input {...register('lastName', { required: true })} type="text" className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-gold focus:border-gold outline-none" />
                                     </div>
                                     <div className="md:col-span-2 space-y-2">
                                         <label className="text-sm font-bold text-navy">Address</label>
-                                        <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-gold focus:border-gold outline-none" />
+                                        <input {...register('address', { required: true })} type="text" className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-gold focus:border-gold outline-none" />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-bold text-navy">City</label>
-                                        <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-gold focus:border-gold outline-none" />
+                                        <input {...register('city', { required: true })} type="text" className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-gold focus:border-gold outline-none" />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-bold text-navy">Postal Code</label>
-                                        <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-gold focus:border-gold outline-none" />
+                                        <input {...register('postalCode', { required: true })} type="text" className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-gold focus:border-gold outline-none" />
                                     </div>
                                     <div className="md:col-span-2 space-y-2">
                                         <label className="text-sm font-bold text-navy">Phone Number</label>
-                                        <input type="tel" className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-gold focus:border-gold outline-none" />
+                                        <input {...register('phone', { required: true })} type="tel" className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-gold focus:border-gold outline-none" />
                                     </div>
                                 </div>
                                 <div className="mt-8 flex justify-end">
-                                    <Button onClick={() => setStep(2)}>Continue to Payment</Button>
+                                    <Button type="submit">Continue to Payment</Button>
                                 </div>
-                            </div>
+                            </form>
                         )}
 
                         {step === 2 && (
@@ -111,20 +145,15 @@ const Checkout = () => {
                             <div className="animate-fade-in">
                                 <h2 className="text-xl font-bold text-navy mb-6">Review Order</h2>
                                 <div className="space-y-4 mb-8">
-                                    <div className="flex justify-between items-center border-b border-gray-100 pb-4">
-                                        <div>
-                                            <h4 className="font-bold text-navy">Royal Kundan Necklace Set</h4>
-                                            <p className="text-sm text-gray-500">Qty: 1</p>
+                                    {items.map(item => (
+                                        <div key={item.id} className="flex justify-between items-center border-b border-gray-100 pb-4">
+                                            <div>
+                                                <h4 className="font-bold text-navy">{item.name}</h4>
+                                                <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+                                            </div>
+                                            <span className="font-bold">₹{(item.price * item.quantity).toLocaleString()}</span>
                                         </div>
-                                        <span className="font-bold">₹2,499</span>
-                                    </div>
-                                    <div className="flex justify-between items-center border-b border-gray-100 pb-4">
-                                        <div>
-                                            <h4 className="font-bold text-navy">Antique Gold Plated Bangles</h4>
-                                            <p className="text-sm text-gray-500">Qty: 2</p>
-                                        </div>
-                                        <span className="font-bold">₹2,598</span>
-                                    </div>
+                                    ))}
                                 </div>
                                 <div className="flex justify-between">
                                     <Button variant="secondary" onClick={() => setStep(2)}>Back</Button>
@@ -140,20 +169,20 @@ const Checkout = () => {
                         <div className="space-y-2 mb-4 text-sm">
                             <div className="flex justify-between text-gray-600">
                                 <span>Subtotal</span>
-                                <span>₹5,097</span>
+                                <span>₹{subtotal.toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between text-gray-600">
                                 <span>Shipping</span>
-                                <span className="text-green-600">Free</span>
+                                <span className="text-green-600">{shipping === 0 ? 'Free' : `₹${shipping}`}</span>
                             </div>
                             <div className="flex justify-between text-gray-600">
                                 <span>Tax (GST)</span>
-                                <span>₹917</span>
+                                <span>₹{(subtotal * 0.18).toLocaleString()}</span>
                             </div>
                         </div>
                         <div className="border-t border-gray-100 pt-4 flex justify-between font-bold text-lg text-navy">
                             <span>Total</span>
-                            <span>₹6,014</span>
+                            <span>₹{finalTotal.toLocaleString()}</span>
                         </div>
                     </div>
                 </div>

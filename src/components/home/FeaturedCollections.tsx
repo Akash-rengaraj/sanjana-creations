@@ -13,7 +13,7 @@ const FeaturedCollections = () => {
             try {
                 const data: any = await getProducts();
                 // Duplicate for infinite scroll effect
-                setProducts([...data, ...data, ...data]);
+                setProducts(data);
             } catch (error) {
                 console.error('Failed to fetch products:', error);
             }
@@ -45,7 +45,7 @@ const FeaturedCollections = () => {
                     current.scrollBy({ left: 1, behavior: 'auto' }); // Slow drift
                 }
             }
-        },); // Slowed down from 30ms to 50ms
+        }, 1000000); // Slowed down from 30ms to 50ms
 
         return () => clearInterval(interval);
     }, []);
@@ -74,17 +74,23 @@ const FeaturedCollections = () => {
                     </div>
                 </div>
 
-                <div
-                    ref={scrollContainerRef}
-                    className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory hide-scrollbar hover:cursor-grab active:cursor-grabbing"
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                >
-                    {products.map((product, index) => (
-                        <div key={`${product.id} -${index} `} className="min-w-[280px] md:min-w-[320px] snap-start transform transition-transform hover:scale-105 duration-300">
-                            <ProductCard {...product} />
-                        </div>
-                    ))}
-                </div>
+                {products.length > 0 ? (
+                    <div
+                        ref={scrollContainerRef}
+                        className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory hide-scrollbar hover:cursor-grab active:cursor-grabbing"
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
+                        {products.map((product, index) => (
+                            <div key={`${product.id}-${index}`} className="min-w-[280px] md:min-w-[320px] snap-start transform transition-transform hover:scale-105 duration-300">
+                                <ProductCard {...product} />
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-12 text-gray-500">
+                        <p>No products available at the moment.</p>
+                    </div>
+                )}
             </div>
         </section>
     );

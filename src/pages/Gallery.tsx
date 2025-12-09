@@ -1,38 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Filter as FilterIcon, Search } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import Filter from '../components/gallery/Filter';
+import { getProducts } from '../services/productService';
 
 const Gallery = () => {
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [products, setProducts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    // Dummy data
-    const products = Array.from({ length: 12 }).map((_, i) => ({
-        id: i.toString(),
-        name: `Elegant Jewelry Piece ${i + 1}`,
-        price: 1500 + (i * 100),
-        originalPrice: 2000 + (i * 100),
-        image: `https://source.unsplash.com/random/400x500?jewelry&sig=${i}`,
-        rating: 4.5,
-        reviews: 10 + i * 5,
-        isNew: i % 3 === 0
-    }));
-
-    // Using specific images for better visual
-    const productImages = [
-        'https://images.unsplash.com/photo-1599643478518-17488fbbcd75?q=80&w=1887&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=1887&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1535632787350-4e68ef0ac584?q=80&w=1887&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=1887&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?q=80&w=1935&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=2070&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1603974372039-adc49044b6bd?q=80&w=1889&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?q=80&w=1888&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1630019852942-f89202989a51?q=80&w=1938&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=2070&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1617038224558-28ad3fb558a7?q=80&w=1887&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?q=80&w=1887&auto=format&fit=crop',
-    ];
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const data = await getProducts();
+                setProducts(data);
+            } catch (error) {
+                console.error('Failed to fetch products:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProducts();
+    }, []);
 
     return (
         <div className="bg-cream min-h-screen">
@@ -80,15 +69,24 @@ const Gallery = () => {
 
                     {/* Product Grid */}
                     <div className="flex-1">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {products.map((product, index) => (
-                                <ProductCard
-                                    key={product.id}
-                                    {...product}
-                                    image={productImages[index % productImages.length]}
-                                />
-                            ))}
-                        </div>
+                        {loading ? (
+                            <div className="flex justify-center py-20">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
+                            </div>
+                        ) : products.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {products.map((product) => (
+                                    <ProductCard
+                                        key={product.id}
+                                        {...product}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-20 text-gray-500">
+                                <p>No products found.</p>
+                            </div>
+                        )}
 
                         {/* Pagination */}
                         <div className="mt-12 flex justify-center gap-2">

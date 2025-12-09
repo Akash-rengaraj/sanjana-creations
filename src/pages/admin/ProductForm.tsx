@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import Button from '../../components/Button';
-import { getProductById, addProduct, updateProduct } from '../../services/productService';
-import { ArrowLeft, Save } from 'lucide-react';
+import { getProductById, addProduct, updateProduct, uploadImage } from '../../services/productService';
+import { ArrowLeft, Save, Upload, X } from 'lucide-react';
 
 interface ProductFormData {
     name: string;
@@ -19,6 +19,8 @@ const ProductForm = () => {
     const navigate = useNavigate();
     const isEditMode = !!id;
     const [isLoading, setIsLoading] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [previewImage, setPreviewImage] = useState('');
 
     const { register, handleSubmit, setValue, formState: { errors } } = useForm<ProductFormData>();
 
@@ -31,7 +33,9 @@ const ProductForm = () => {
                     setValue('category', product.category);
                     setValue('price', product.price);
                     setValue('stock', product.stock);
+                    setValue('stock', product.stock);
                     setValue('image', product.image);
+                    setPreviewImage(product.image);
                     setValue('description', product.description);
                 } catch (error) {
                     console.error('Failed to fetch product:', error);
@@ -100,7 +104,7 @@ const ProductForm = () => {
                             <label className="text-sm font-medium text-gray-700">Price (₹)</label>
                             <input
                                 type="number"
-                                {...register('price', { required: 'Price is required', min: 0 })}
+                                {...register('price', { required: 'Price is required', min: 0, valueAsNumber: true })}
                                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold/50"
                                 placeholder="0.00"
                             />
@@ -111,7 +115,7 @@ const ProductForm = () => {
                             <label className="text-sm font-medium text-gray-700">Stock</label>
                             <input
                                 type="number"
-                                {...register('stock', { required: 'Stock is required', min: 0 })}
+                                {...register('stock', { required: 'Stock is required', min: 0, valueAsNumber: true })}
                                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold/50"
                                 placeholder="0"
                             />
@@ -120,12 +124,64 @@ const ProductForm = () => {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Image URL</label>
-                        <input
-                            {...register('image', { required: 'Image URL is required' })}
-                            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold/50"
-                            placeholder="https://example.com/image.jpg"
-                        />
+                        <label className="text-sm font-medium text-gray-700">Product Image</label>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center hover:border-gold transition-colors relative bg-gray-50">
+                            {previewImage ? (
+                                <div className="relative w-full h-64">
+                                    <img
+                                        src={previewImage.startsWith('http') ? previewImage : `http://localhost:5000${previewImage}`}
+                                        alt="Preview"
+                                        className="w-full h-full object-contain rounded-lg"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setPreviewImage('');
+                                            setValue('image', '');
+                                        }}
+                                        className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-md hover:bg-red-50 text-red-500"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                setUploading(true);
+                                                try {
+                                                    const imagePath = await uploadImage(file);
+                                                    setValue('image', imagePath);
+                                                    setPreviewImage(imagePath);
+                                                } catch (error) {
+                                                    console.error('Upload failed:', error);
+                                                    alert('Image upload failed');
+                                                } finally {
+                                                    setUploading(false);
+                                                }
+                                            }
+                                        }}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                    <div className="text-center pointer-events-none">
+                                        {uploading ? (
+                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-navy mx-auto mb-2"></div>
+                                        ) : (
+                                            <Upload size={32} className="mx-auto text-gray-400 mb-2" />
+                                        )}
+                                        <p className="text-sm text-gray-600 font-medium">
+                                            {uploading ? 'Uploading...' : 'Click or drag image here'}
+                                        </p>
+                                        <p className="text-xs text-gray-400 mt-1">PNG, JPG up to 5MB</p>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        <input type="hidden" {...register('image', { required: 'Product image is required' })} />
                         {errors.image && <p className="text-red-500 text-xs">{errors.image.message}</p>}
                     </div>
 
